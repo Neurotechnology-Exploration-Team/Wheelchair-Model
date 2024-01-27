@@ -1,0 +1,5 @@
+torch
+numpy
+brainflow
+pandas
+scikit-learn
