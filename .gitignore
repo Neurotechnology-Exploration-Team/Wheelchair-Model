@@ -1,0 +1,5 @@
+__pycache__/*
+data/*
+__pycache__/config.cpython-311.pyc
+__pycache__/EEGDataLoader.cpython-311.pyc
+__pycache__/EEGModel.cpython-311.pyc
