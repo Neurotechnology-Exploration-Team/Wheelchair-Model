@@ -27,26 +27,17 @@ class EchoStateNetwork(nn.Module):
         self.reservoir.weight.data = torch.randn(self.reservoir.weight.data.shape) * spectral_radius
 
     def forward(self, x):
-        state = torch.zeros(x.size(0), self.reservoir_size) 
+        state = torch.zeros(x.size(0), self.reservoir_size)
         outputs = []
-        for t in range(x.size(1)):
-            input_t = x[:, t]
+        for t in range(x.size(2)):  # Assuming last dimension is time
+            input_t = x[:, :, t]  # Shape: [batch_size, channels]
             input_weighted = torch.matmul(input_t, self.input_weights.T).float()
             state = torch.tanh(self.reservoir(state).float() + input_weighted)
             outputs.append(state)
         outputs = torch.cat(outputs, dim=1)
         outputs = outputs.view(x.size(0), -1)
-        if outputs.size(1) != self.reservoir_size:
-            raise ValueError(f"Expected size of the second dimension of outputs is {self.reservoir_size}, but got {outputs.size(1)}")
-
         outputs = self.output_weights(outputs)
         return outputs
-
-
-
-
-
-
 
 
 def train_esn(model, data_loader, criterion, epochs=1):
@@ -91,3 +82,14 @@ def trainModel(esn,data):
 
 def getSamplePred(esn,sampleEEG):
     return predict_esn(esn, sampleEEG)
+
+def saveModel(esn):
+    torch.save(esn.state_dict(), './models/TestModel.pth')
+def loadModel():
+    # Create an instance of the EchoStateNetwork
+    model = EchoStateNetwork(config.input_size, config.reservoir_size, config.output_size)
+    
+    # Load the saved state_dict into this model instance
+    model.load_state_dict(torch.load('./models/TestModel.pth'))
+    
+    return model

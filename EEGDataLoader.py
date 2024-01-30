@@ -13,7 +13,11 @@ class EEGDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        # Assuming each row in the CSV represents one time step
+        # and the columns 1:9 are different channels
         sample = self.data.iloc[idx, 1:9].values.astype(float)
+        sample = sample.reshape(-1, 8)  # Reshape to [data_length, channels]
+
         blink = self.data.iloc[idx, -1]
         label = 1 if blink == "blink" else 0
 

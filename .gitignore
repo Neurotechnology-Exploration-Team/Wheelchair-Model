@@ -1,3 +1,15 @@
 __pycache__/config.cpython-311.pyc
 __pycache__/EEGDataLoader.cpython-311.pyc
 __pycache__/EEGModel.cpython-311.pyc
+.idea/BrainModel.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+__pycache__/config.cpython-310.pyc
+__pycache__/EEGDataLoader.cpython-310.pyc
+__pycache__/EEGDataLoader.cpython-311.pyc
+__pycache__/EEGModel.cpython-310.pyc
+__pycache__/EEGModel.cpython-311.pyc
+data/output_file.txt
+models/TestModel.pth
