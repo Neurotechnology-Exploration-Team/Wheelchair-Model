@@ -1,95 +1,29 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.autograd import Variable
-import config
 
-class EchoStateNetwork(nn.Module):
-    def __init__(self, input_size, reservoir_size, output_size, spectral_radius=0.95, sparsity=0.1):
-        super(EchoStateNetwork, self).__init__()
-        self.reservoir = nn.Linear(reservoir_size, reservoir_size)
-        
-        self.init_reservoir(spectral_radius)
-        self.input_size = input_size
-        self.reservoir_size = reservoir_size
-        self.output_size = output_size
-        self.spectral_radius = spectral_radius
-        self.input_weights = nn.Parameter(torch.randn(reservoir_size, input_size) / np.sqrt(input_size), requires_grad=False)
-        reservoir_weights = torch.rand(reservoir_size, reservoir_size) - 0.5
-        mask = (torch.rand(reservoir_size, reservoir_size) < sparsity).float()
-        reservoir_weights *= mask
-        eigenvalues = torch.linalg.eigvals(reservoir_weights).abs()
-        reservoir_weights /= eigenvalues.max()
-        reservoir_weights *= spectral_radius
-        self.reservoir_weights = nn.Parameter(reservoir_weights, requires_grad=False)
-        self.output_weights = nn.Linear(reservoir_size, output_size)
-    def init_reservoir(self, spectral_radius):
-        self.reservoir.weight.data = torch.randn(self.reservoir.weight.data.shape) * spectral_radius
+class EEGModel(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+        super(EEGModel, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        state = torch.zeros(x.size(0), self.reservoir_size)
-        outputs = []
-        for t in range(x.size(2)):  # Assuming last dimension is time
-            input_t = x[:, :, t]  # Shape: [batch_size, channels]
-            input_weighted = torch.matmul(input_t, self.input_weights.T).float()
-            state = torch.tanh(self.reservoir(state).float() + input_weighted)
-            outputs.append(state)
-        outputs = torch.cat(outputs, dim=1)
-        outputs = outputs.view(x.size(0), -1)
-        outputs = self.output_weights(outputs)
-        return outputs
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        out, _ = self.rnn(x, h0)
+        out = self.fc(out[:, -1, :])
+        return out
 
-
-def train_esn(model, data_loader, criterion, epochs=1):
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    
-    for epoch in range(epochs):
-        for i, (inputs, labels) in enumerate(data_loader):
-            inputs = Variable(inputs)
-            labels = Variable(labels).float()  
-            
-            optimizer.zero_grad()
-            
-            outputs = model(inputs)
-            outputs = outputs.view_as(labels)
-
-            loss = criterion(outputs, labels)
-            
-            loss.backward()
-            optimizer.step()
-            
-            if i % 10 == 0:
-                print(f'Epoch [{epoch+1}/{epochs}], Step [{i+1}/{len(data_loader)}], Loss: {loss.item()}')
-
-    print('Training complete')
-
-
-
-def predict_esn(model, input_data):
-    model.eval()
-    with torch.no_grad():
-        predictions = model(input_data)
-        mean, std_dev = predictions.chunk(2, dim=1)
-        gaussian_output = torch.normal(mean, std_dev)
-    return gaussian_output
-
-def createModel():
-    return EchoStateNetwork(config.input_size, config.reservoir_size, config.output_size)
-
-
-def trainModel(esn,data):
-    train_esn(esn, data, nn.MSELoss(), epochs=10)
-
-def getSamplePred(esn,sampleEEG):
-    return predict_esn(esn, sampleEEG)
-
-def saveModel(esn):
-    torch.save(esn.state_dict(), './models/TestModel.pth')
-def loadModel():
-    # Create an instance of the EchoStateNetwork
-    model = EchoStateNetwork(config.input_size, config.reservoir_size, config.output_size)
-    
-    # Load the saved state_dict into this model instance
-    model.load_state_dict(torch.load('./models/TestModel.pth'))
-    
-    return model
+    def predict(self, input_data):
+        self.eval()
+        with torch.no_grad():
+            if isinstance(input_data, np.ndarray):
+                input_data = torch.tensor(input_data, dtype=torch.float)
+            if input_data.dim() == 2:
+                input_data = input_data.unsqueeze(0)
+            input_data = input_data.to(next(self.parameters()).device)
+            output = self(input_data)
+            predicted_class = output.argmax(dim=1)
+            return predicted_class
