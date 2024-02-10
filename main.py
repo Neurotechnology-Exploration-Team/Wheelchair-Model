@@ -56,7 +56,7 @@ def testing(model):
     board.start_stream()
     print("Started data stream.")
     sampling_rate = BoardShim.get_sampling_rate(board_id)
-    segment_length = 0.5
+    segment_length = 1/250
     samples_per_segment = int(sampling_rate * segment_length)
 
 
@@ -73,6 +73,7 @@ def testing(model):
             if data.shape[1] >= samples_per_segment:
                 eeg_channels = [1,2,3,4,5,6,7,8]
                 data_segment = data[eeg_channels, -samples_per_segment:].T  # IMPORTANT BRAINFLOW GIVES DATA TRANSPOSED INCORRECTLY
+                print(data_segment.shape)
                 predicted_class = process_and_predict(data_segment, model)
                 print(f"Predicted class: {predicted_class.item()}")
             start_time = current_time
@@ -99,7 +100,7 @@ def main():
     train(model, train_loader, valid_loader, criterion, optimizer)
 
 
-    #testing(model)
+    testing(model)
 
 
 if __name__ == "__main__":

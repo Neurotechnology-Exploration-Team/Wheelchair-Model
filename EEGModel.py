@@ -5,7 +5,7 @@ class EEGModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes, sparsity=0.1, spectral_radius=0.95):
         super(EEGModel, self).__init__()
         self.hidden_size = hidden_size
-        
+
         self.W_in = nn.Parameter(torch.randn(hidden_size, input_size), requires_grad=False)
         W_res = torch.randn(hidden_size, hidden_size)
         W_res = torch.where(torch.rand(hidden_size, hidden_size) < sparsity, torch.zeros_like(W_res), W_res)
@@ -30,3 +30,11 @@ class EEGModel(nn.Module):
 
     def reset_state(self):
         del self.h
+    def predict(self, x):
+        # Assuming x is already in the correct shape and format for the model
+        #self.eval()  # Set the model to evaluation mode
+        with torch.no_grad():  # Disable gradient computation
+            outputs = self(x)  # Get the model's output
+            probabilities = F.softmax(outputs, dim=1)  # Apply softmax to convert to probabilities
+            predicted_classes = torch.argmax(probabilities, dim=1)  # Get the predicted classes
+        return predicted_classes
