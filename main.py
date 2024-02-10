@@ -92,7 +92,7 @@ def main():
 
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False)
-    model = EEGModel(input_size=8, hidden_size=128, num_layers=2, num_classes=2)
+    model = EEGModel(input_size=8, hidden_size=128, num_classes=2)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
