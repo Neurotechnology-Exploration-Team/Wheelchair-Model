@@ -1,0 +1,1 @@
+I just turned it from a basic RNN to a ESN maybe we can explore that differences between the two

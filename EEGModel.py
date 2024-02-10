@@ -2,18 +2,36 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+class ESN(nn.Module):
+    def __init__(self, input_size, hidden_size, sparsity=0.1, spectral_radius=0.95):
+        super(ESN, self).__init__()
+        self.hidden_size = hidden_size
+        # Initialize input weights
+        self.W_in = nn.Parameter(torch.randn(hidden_size, input_size), requires_grad=False)
+        # Initialize reservoir weights
+        W_res = torch.randn(hidden_size, hidden_size)
+        W_res = torch.where(torch.rand(hidden_size, hidden_size) < sparsity, torch.zeros_like(W_res), W_res)
+        radius = torch.max(torch.abs(torch.linalg.eigvals(W_res))).real
+        self.W_res = nn.Parameter(W_res * (spectral_radius / radius), requires_grad=False)
+
+    def forward(self, x):
+        # Initialize hidden state
+        h = torch.zeros(x.size(0), self.hidden_size).to(x.device)
+        for t in range(x.size(1)):
+            h = torch.tanh(self.W_in @ x[:, t, :].T + self.W_res @ h.T).T
+        return h
+
 class EEGModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         super(EEGModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+        self.esn = ESN(input_size, hidden_size)  # Replace RNN with ESN
         self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        out, _ = self.rnn(x, h0)
-        out = self.fc(out[:, -1, :])
+        out = self.esn(x)  # This is now [batch_size, features], missing the sequence_length dimension
+        out = self.fc(out)  # No need to index the non-existent sequence_length dimension
         return out
 
     def predict(self, input_data):

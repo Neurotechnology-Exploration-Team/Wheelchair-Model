@@ -99,7 +99,7 @@ def main():
     train(model, train_loader, valid_loader, criterion, optimizer)
 
 
-    testing(model)
+    #testing(model)
 
 
 if __name__ == "__main__":
