@@ -13,3 +13,16 @@ __pycache__/EEGModel.cpython-310.pyc
 __pycache__/EEGModel.cpython-311.pyc
 data/output_file.txt
 models/TestModel.pth
+data/S002/Blink/trial_00/EEG_data.csv
+data/S002/Brow Furrow/trial_00/EEG_data.csv
+data/S002/Brow Furrow/trial_01/EEG_data.csv
+data/S002/Brow Unfurrow/trial_00/EEG_data.csv
+data/S002/Eyes Closed/trial_00/EEG_data.csv
+data/S002/Eyes Open/trial_00/EEG_data.csv
+data/S002/Float Down/trial_00/EEG_data.csv
+data/S002/Float Left/trial_00/EEG_data.csv
+data/S002/Float Right/trial_00/EEG_data.csv
+data/S002/Float Up/trial_00/EEG_data.csv
+data/S002/Select/trial_00/EEG_data.csv
+data/S002/Stationary Float to Float Up/trial_00/EEG_data.csv
+data/S002/Stationary Floating/trial_00/EEG_data.csv

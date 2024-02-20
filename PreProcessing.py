@@ -17,14 +17,16 @@ def load_eeg_data(file_path):
     # TODO: Load the CSV file into a DataFrame
     return pd.read_csv(file_path)
 def butter_bandpass_filter(data, order=5):
-    def butter_bandpass(order=5):
-        nyq = 0.5 * config.fs
-        low = config.lowcut / nyq
-        high = config.highcut / nyq
+    def butter_bandpass(lowcut, highcut, fs, order=order):
+        nyq = 0.5 * fs
+        low = lowcut / nyq
+        high = highcut / nyq
         b, a = butter(order, [low, high], btype='band')
         return b, a
-    b, a = butter_bandpass(config.fs, order=order)
-    y = lfilter(b, a, data)
+    # Use the lowcut and highcut from the config module, assuming they are defined there
+    b, a = butter_bandpass(config.lowcut, config.highcut, config.fs, order=order)
+    y = lfilter(b, a, data.astype(float))
+
     return y
 
 def preprocess_signal(data):
@@ -41,9 +43,9 @@ def preprocess_signal(data):
     # Maybe notch filtering for powerline interferance?
 
     # Example: Bandpass filtering, detrending, etc.
-    zero_removed = data[data.iloc[:, 1:5].ne(0.00000).any(axis=1)]
+    #zero_removed = data[data.iloc[:, 1:5].ne(0.00000).any(axis=1)]
 
-    filtered_fully = butter_bandpass_filter(zero_removed)
+    filtered_fully = butter_bandpass_filter(data)
 
 
     return filtered_fully

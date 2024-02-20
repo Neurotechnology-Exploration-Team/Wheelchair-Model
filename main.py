@@ -7,6 +7,8 @@ from EEGDataSet import EEGDataSet
 from EEGModel import EEGModel
 from brainflow import BoardShim, BrainFlowInputParams, BoardIds
 import time
+import os
+import glob
 def validate(model, dataloader, criterion):
     model.eval()
     total_loss = 0
@@ -27,15 +29,16 @@ def train(model, train_loader, valid_loader, criterion, optimizer, num_epochs=10
         model.train()
         total_loss = 0
         for data in train_loader:
-            inputs = data
-            labels = torch.zeros(inputs.size(0), dtype=torch.long)
-
+            inputs, labels = data  # This line unpacks the inputs and labels
+            labels = labels.to(dtype=torch.long)  # Ensure labels are of type long if they're not already
+        
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
+
 
         avg_train_loss = total_loss / len(train_loader)
         avg_valid_loss = validate(model, valid_loader, criterion)
@@ -80,11 +83,18 @@ def testing(model):
     board.release_session()
     print("Data stream stopped and session released.")
 
-
+def load_data_from_folder(data_folder):
+    # Generate the full path for the data folder
+    full_path = os.path.join(data_folder, '*.csv')  # Assumes files are CSV format
+    file_paths = glob.glob(full_path)
+    return file_paths
 def main():
-    eeg_data_path = 'S002/Blink/trial_00/EEG_data.csv'
-    eeg_data = pd.read_csv(eeg_data_path)
-    dataset = EEGDataSet(eeg_data)
+    #eeg_data_path = '/data/S002/Blink/trial_00/EEG_data.csv'
+    #eeg_data = pd.read_csv(eeg_data_path)
+    #dataset = EEGDataSet(eeg_data)
+    data_folder = "cata"  # Adjust this path to your data folder location
+    file_paths = load_data_from_folder(data_folder)
+    dataset = EEGDataSet(file_paths)
 
     train_size = int(0.8 * len(dataset))
     valid_size = len(dataset) - train_size
