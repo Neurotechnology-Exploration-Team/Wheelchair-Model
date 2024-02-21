@@ -7,13 +7,21 @@ class EEGModel(nn.Module):
         super(EEGModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, num_classes)
+        # Use LSTM instead of RNN
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        # Additional fully connected layer for enhanced feature learning
+        self.fc1 = nn.Linear(hidden_size, hidden_size // 2)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size // 2, num_classes)
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        out, _ = self.rnn(x, h0)
-        out = self.fc(out[:, -1, :])
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        
+        out, _ = self.lstm(x, (h0, c0))
+        out = self.fc1(out[:, -1, :])
+        out = self.relu(out)
+        out = self.fc2(out)
         return out
 
     def predict(self, input_data):

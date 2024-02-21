@@ -17,15 +17,16 @@ def load_eeg_data(file_path):
     # TODO: Load the CSV file into a DataFrame
     return pd.read_csv(file_path)
 def butter_bandpass_filter(data, order=5):
-    def butter_bandpass(order=5):
+    def butter_bandpass(order=order):
         nyq = 0.5 * config.fs
         low = config.lowcut / nyq
         high = config.highcut / nyq
         b, a = butter(order, [low, high], btype='band')
         return b, a
-    b, a = butter_bandpass(config.fs, order=order)
-    y = lfilter(b, a, data)
+    b, a = butter_bandpass(order=order)  # Corrected call
+    y = lfilter(b, a, data.astype(float))
     return y
+
 
 def preprocess_signal(data):
     """
