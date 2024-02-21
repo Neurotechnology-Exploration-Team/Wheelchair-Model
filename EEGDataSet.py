@@ -5,11 +5,8 @@ from torch.utils.data import Dataset
 from sklearn.preprocessing import LabelEncoder
 
 class EEGDataSet(Dataset):
-
-    def __init__(self, file_paths, segment_size=125, padding_value=0.0, exclude_labels=None):
-        self.segment_size = segment_size
-        self.padding_value = padding_value
-        self.segments = []
+    def __init__(self, file_paths, exclude_labels=None):
+        self.data = []
         self.labels = []
         self.label_encoder = LabelEncoder()  # Initialize the LabelEncoder
         all_labels = []
@@ -31,46 +28,27 @@ class EEGDataSet(Dataset):
                 dataframe = dataframe[~dataframe['Label'].isin(exclude_labels)]
             self.process_file(dataframe)
 
-
     def process_file(self, dataframe):
         # Assuming 'Timestamp' is in seconds and your sampling rate is known
-        sampling_rate = 256  # Example: 256 Hz, adjust this according to your actual sampling rate
-        trim_samples = 4 * sampling_rate  # Number of samples to trim from start and end
-        
-        # Trim the dataframe based on the timestamp range
-        if 'Timestamp' in dataframe.columns:
-            start_time = dataframe['Timestamp'].iloc[trim_samples]  # Time after trimming start
-            end_time = dataframe['Timestamp'].iloc[-trim_samples]  # Time before trimming end
-            trimmed_df = dataframe[(dataframe['Timestamp'] >= start_time) & (dataframe['Timestamp'] <= end_time)]
-        else:
-            trimmed_df = dataframe  # No trimming if no Timestamp column
+        trimmed_df = dataframe  # No need for trimming if you're inputting each dataset individually
 
+        # Processing labels
         if 'Label' in trimmed_df.columns:
             labels = self.label_encoder.transform(trimmed_df['Label'])
             self.labels.extend(labels)
         
+        # Extracting EEG data
         eeg_data = trimmed_df.filter(regex='EEG').to_numpy()
-        self.segments.extend(self.create_segments(eeg_data))
-
-    def create_segments(self, eeg_data):
-        num_samples = eeg_data.shape[0]
-        num_segments = int(np.ceil(num_samples / self.segment_size))
-        segments = []
-        for i in range(num_segments):
-            start_idx = i * self.segment_size
-            end_idx = start_idx + self.segment_size
-            segment = eeg_data[start_idx:end_idx]
-            if len(segment) < self.segment_size:
-                padding_amount = self.segment_size - len(segment)
-                padding = np.full((padding_amount, eeg_data.shape[1]), self.padding_value)
-                segment = np.vstack((segment, padding))
-            segments.append(segment)
-        return segments
+        # Append each row of EEG data as a separate instance
+        for row in eeg_data:
+            self.data.append(row)
 
     def __len__(self):
-        return len(self.segments)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        segment = self.segments[idx]
-        label = self.labels[idx] if self.labels else -1
-        return torch.tensor(segment, dtype=torch.float), label
+        # Retrieve EEG data and label for the given index
+        eeg_data = self.data[idx]
+        label = self.labels[idx]
+        # Convert data and label to tensors
+        return torch.tensor(eeg_data, dtype=torch.float), label
