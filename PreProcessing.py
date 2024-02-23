@@ -3,7 +3,22 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from scipy.signal import butter, lfilter
 import config
+from scipy.signal import welch
+from statsmodels.tsa.ar_model import AutoReg
+def extract_ar_coefficients(data, order=5):
+    model = AutoReg(data, lags=order)
+    model_fitted = model.fit()
+    return model_fitted.params
 
+def extract_mav(data):
+    return np.mean(np.abs(data))
+
+def extract_alpha_band_power(data, fs):
+    # Assuming alpha band is between 8-12 Hz
+    freqs, psd = welch(data, fs, nperseg=8, scaling='spectrum')
+    alpha_range = (freqs >= 8) & (freqs <= 12)
+    alpha_power = np.sum(psd[alpha_range])
+    return alpha_power
 def load_eeg_data(file_path):
     """
     Load EEG data from a CSV file.

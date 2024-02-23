@@ -3,14 +3,15 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from sklearn.preprocessing import LabelEncoder
-
+from PreProcessing import extract_ar_coefficients, extract_alpha_band_power, extract_mav
+import config
 class EEGDataSet(Dataset):
     def __init__(self, file_paths, exclude_labels=None):
         self.data = []
         self.labels = []
         self.label_encoder = LabelEncoder()  # Initialize the LabelEncoder
         all_labels = []
-
+        #file_paths = [file_paths[0]]
         # Collect all unique labels to fit the LabelEncoder
         for file_path in file_paths:
             dataframe = pd.read_csv(file_path)
@@ -29,26 +30,24 @@ class EEGDataSet(Dataset):
             self.process_file(dataframe)
 
     def process_file(self, dataframe):
-        # Assuming 'Timestamp' is in seconds and your sampling rate is known
-        trimmed_df = dataframe  # No need for trimming if you're inputting each dataset individually
-
-        # Processing labels
-        if 'Label' in trimmed_df.columns:
-            labels = self.label_encoder.transform(trimmed_df['Label'])
+        if 'Label' in dataframe.columns:
+            labels = self.label_encoder.transform(dataframe['Label'])
             self.labels.extend(labels)
-        
-        # Extracting EEG data
-        eeg_data = trimmed_df.filter(regex='EEG').to_numpy()
-        # Append each row of EEG data as a separate instance
+
+        eeg_data = dataframe.filter(regex='EEG').to_numpy()
         for row in eeg_data:
-            self.data.append(row)
+            # Assume these functions return numpy arrays
+            ar_features = extract_ar_coefficients(row, order=2)
+            mav_feature = extract_mav(row)
+            alpha_bp_feature = extract_alpha_band_power(row, fs=config.fs)  # Assuming fs=256Hz is predefined
+            features = np.concatenate((row,ar_features, [mav_feature], [alpha_bp_feature]))
+            self.data.append(features)
 
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
-        # Retrieve EEG data and label for the given index
-        eeg_data = self.data[idx]
-        label = self.labels[idx]
-        # Convert data and label to tensors
-        return torch.tensor(eeg_data, dtype=torch.float), label
+    def __getitem__(self, index):
+        # Retrieve pre-processed features and label for a given index
+        features_tensor = torch.tensor(self.data[index], dtype=torch.float)
+        label = self.labels[index]  # Assuming labels are stored as integers
+        return features_tensor, label

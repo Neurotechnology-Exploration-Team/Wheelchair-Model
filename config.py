@@ -1,4 +1,4 @@
-input_size = 8
+input_size = 7
 reservoir_size = 500
 output_size = 1
 fs = 250.0
