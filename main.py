@@ -63,9 +63,7 @@ def main():
 
     print("Creating Data Sets")
     dataset = EEGDataSet(file_paths,exclude_labels=[])
-    train_size = int(0.8 * len(dataset))
-    valid_size = len(dataset) - train_size
-    train_dataset, valid_dataset = torch.utils.data.random_split(dataset, [train_size, valid_size])
+
     print("Finished Data Sets")
 
     print("Creating Data Loaders")
@@ -74,7 +72,7 @@ def main():
     print("Finished Data Loaders")
 
     print("Starting model creation")
-    model = EEGModel(input_size=13, hidden_size=128, num_layers=2, num_classes=len(set(dataset.labels)))
+    model = EEGModel(input_size=5, hidden_size=128, num_layers=2, num_classes=len(set(dataset.labels)))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 

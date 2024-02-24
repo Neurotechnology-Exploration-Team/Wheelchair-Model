@@ -40,7 +40,7 @@ class EEGDataSet(Dataset):
             ar_features = extract_ar_coefficients(row, order=2)
             mav_feature = extract_mav(row)
             alpha_bp_feature = extract_alpha_band_power(row, fs=config.fs)  # Assuming fs=256Hz is predefined
-            features = np.concatenate((row,ar_features, [mav_feature], [alpha_bp_feature]))
+            features = np.concatenate((ar_features, [mav_feature], [alpha_bp_feature]))
             self.data.append(features)
 
     def __len__(self):
