@@ -1,26 +1,40 @@
-import numpy as np
+import torch
 
-class EchoStateNetwork:
-    def __init__(self, input_size, reservoir_size, output_size, spectral_radius=0.95):
+
+class EchoStateNetwork(torch.nn.Module):
+    def __init__(self, input_size, reservoir_size, output_size, spectral_radius=0.95, device=None):
+        super(EchoStateNetwork, self).__init__()
         # Initialize parameters
         self.input_size = input_size
         self.reservoir_size = reservoir_size
         self.output_size = output_size
+        self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # Initialize weights
-        self.W_in = np.random.rand(reservoir_size, input_size) - 0.5  # Uniform distribution
-        self.W_res = np.random.rand(reservoir_size, reservoir_size) - 0.5
-        self.W_out = np.zeros((output_size, reservoir_size))
+        self.W_in = (torch.rand(reservoir_size, input_size, device=self.device) - 0.5)  # Uniform distribution
+        self.W_res = (torch.rand(reservoir_size, reservoir_size, device=self.device) - 0.5)
+        self.W_out = torch.zeros(output_size, reservoir_size, device=self.device)
+
         # Initialize the reservoir
-        self.reservoir = np.zeros(reservoir_size)
+        self.reservoir = torch.zeros(reservoir_size, device=self.device)
+
         # Scale W_res to ensure the spectral radius condition
-        self.W_res *= spectral_radius / np.max(np.abs(np.linalg.eigvals(self.W_res)))
+        radius = spectral_radius / torch.max(torch.abs(torch.linalg.eigvals(self.W_res))).item()
+        self.W_res *= radius
 
     def update_reservoir(self, input_vector):
         # Update the reservoir state
+
+
         try:
-            self.reservoir = np.tanh(np.dot(self.W_in, input_vector) + np.dot(self.W_res, self.reservoir))
+            input_vector = input_vector.to(self.device)
+            self.reservoir = torch.tanh(self.W_in @ input_vector + self.W_res @ self.reservoir)
         except:
-            #print("input_vector")
+            #print(f"Input vector shape: {input_vector.shape}")
+            #print(f"W_in shape: {self.W_in.shape}")
+            #print(f"W_res shape: {self.W_res.shape}")
+            #print(f"Reservoir shape: {self.reservoir.shape}")
+            #print("Fucking Broken")
             pass
 
     def train(self, training_inputs, training_outputs, regularization_coefficient=1e-8):
@@ -28,26 +42,25 @@ class EchoStateNetwork:
         states = []
         for input_vector in training_inputs:
             self.update_reservoir(input_vector)
-            states.append(self.reservoir)
-        states = np.array(states).T  # Transpose to match the shape for training
+            states.append(self.reservoir.unsqueeze(0))  # Add batch dimension
+        states = torch.cat(states, dim=0).T  # Concatenate along batch dimension and transpose
 
         # Train W_out
         # Add regularization to avoid overfitting
-        self.W_out = np.dot(np.dot(training_outputs.T, states.T), np.linalg.inv(np.dot(states, states.T) + regularization_coefficient * np.eye(self.reservoir_size)))
+        states_T = states.T  # Transpose for correct matrix multiplication
+        inverse_term = torch.linalg.inv(
+            states @ states_T + regularization_coefficient * torch.eye(self.reservoir_size, device=self.device))
+        self.W_out = (training_outputs.T @ states_T) @ inverse_term
 
     def predict(self, input_vector):
-        # Ensure input_vector is always a 2D array for consistent matrix operations
-        input_vector = np.atleast_2d(input_vector)
-
-        # Initialize an empty array to store predictions for each input vector
-        predictions = np.empty((input_vector.shape[0], self.output_size))
+        # Ensure input_vector is a tensor and on the correct device
+        input_vector = torch.atleast_2d(input_vector).to(self.device)
+        predictions = torch.empty((input_vector.size(0), self.output_size), device=self.device)
 
         # Process each input vector through the ESN
         for i, iv in enumerate(input_vector):
             self.update_reservoir(iv)
-            predictions[i] = np.dot(self.W_out, self.reservoir)
+            predictions[i] = self.W_out @ self.reservoir
 
-        # If predicting a single sample, return a 1D array
-        if predictions.shape[0] == 1:
-            return predictions.flatten()
-        return predictions
+        # Return predictions
+        return predictions.squeeze()
