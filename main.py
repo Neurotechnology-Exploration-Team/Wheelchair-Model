@@ -85,6 +85,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-
-# Ok i need to add the ESN
