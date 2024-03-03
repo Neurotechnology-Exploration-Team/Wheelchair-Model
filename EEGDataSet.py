@@ -44,10 +44,11 @@ class EEGDataSet(Dataset):
             self.data.append(features)
 
     def __len__(self):
-        return len(self.data)
+        return len(self.test)
 
     def __getitem__(self, index):
         # Retrieve pre-processed features and label for a given index
-        features_tensor = torch.tensor(self.data[index], dtype=torch.float)
+        dataNoLabel =  self.data[index].drop('Label', axis=1)
+        features_tensor = torch.tensor(dataNoLabel, dtype=torch.float)
         label = self.labels[index]  # Assuming labels are stored as integers
         return features_tensor, label
